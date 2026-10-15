@@ -1,6 +1,6 @@
 import unittest
 
-from aispam.similarity import DuplicateIndex, hamming, simhash, skeleton
+from aiflytrap.similarity import DuplicateIndex, hamming, simhash, skeleton
 
 T1 = "Hi Sam, we help agencies like Acme grow revenue 3x with our growth platform. Book a demo at https://a.biz/go today."
 T2 = "Hi Priya, we help agencies like Globex grow revenue 5x with our growth platform. Book a demo at https://b.biz/go today."

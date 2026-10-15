@@ -1,6 +1,6 @@
 import unittest
 
-from aispam import text as T
+from aiflytrap import text as T
 
 
 class TextSignalTests(unittest.TestCase):

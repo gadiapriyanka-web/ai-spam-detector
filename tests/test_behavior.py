@@ -1,6 +1,6 @@
 import unittest
 
-from aispam.behavior import BehaviorTracker
+from aiflytrap.behavior import BehaviorTracker
 
 
 class BehaviorTests(unittest.TestCase):

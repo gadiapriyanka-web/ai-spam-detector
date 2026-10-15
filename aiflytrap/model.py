@@ -90,5 +90,5 @@ class TextModel:
         with open(path) as f:
             d = json.load(f)
         if d["names"] != FEATURE_NAMES:
-            raise ValueError("model was trained with a different feature set; retrain with `python -m aispam train`")
+            raise ValueError("model was trained with a different feature set; retrain with `python -m aiflytrap train`")
         return cls(d["names"], d["weights"], d["bias"], d["mean"], d["std"])

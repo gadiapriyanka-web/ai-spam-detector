@@ -6,10 +6,10 @@ it made the detector worse on at least one known scenario. They are not claims a
 import unittest
 from collections import Counter
 
-from aispam import metrics as M
-from aispam.detector import DEFAULT_MODEL_PATH, SpamDetector
-from aispam.evaluate import run_stream
-from aispam.synth import LEGIT, SPAM, gen_stream
+from aiflytrap import metrics as M
+from aiflytrap.detector import DEFAULT_MODEL_PATH, SpamDetector
+from aiflytrap.evaluate import run_stream
+from aiflytrap.synth import LEGIT, SPAM, gen_stream
 
 
 class SynthTests(unittest.TestCase):

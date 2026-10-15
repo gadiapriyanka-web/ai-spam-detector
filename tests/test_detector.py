@@ -1,8 +1,8 @@
 import threading
 import unittest
 
-from aispam import SpamDetector
-from aispam.detector import Config, DEFAULT_MODEL_PATH
+from aiflytrap import SpamDetector
+from aiflytrap.detector import Config, DEFAULT_MODEL_PATH
 
 HUMAN = "Ran into the same bug last week - turned out the cache key included a timestamp. Fixed it in 3 lines, PR #412."
 AI_SPAM = ("I hope this message finds you well! I came across your insightful profile and was impressed by your work. "

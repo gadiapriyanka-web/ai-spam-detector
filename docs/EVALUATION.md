@@ -3,13 +3,13 @@
 Reproduce everything below with:
 
 ```bash
-python3 -m aispam bench                  # regenerates docs/RESULTS.md and docs/results.json (about 5 s)
+python3 -m aiflytrap bench                  # regenerates docs/RESULTS.md and docs/results.json (about 5 s)
 python3 -m unittest discover -s tests    # includes benchmark regression gates
 ```
 
 ## 1. What was measured, and how
 
-**Data.** `aispam/synth.py` generates a chronologically interleaved event stream of messages with actor ids,
+**Data.** `aiflytrap/synth.py` generates a chronologically interleaved event stream of messages with actor ids,
 timestamps, request metadata and optional parent-post context. There are 12 scenario families:
 
 | Family | Label | What it models |
@@ -151,10 +151,10 @@ thresholds set slightly below current performance, so they act as tripwires and 
 ## 8. How to evaluate on your own data
 
 ```bash
-python3 -m aispam gen --split test > synthetic.jsonl     # see the expected schema
-python3 -m aispam batch your_events.jsonl --model > scored.jsonl
+python3 -m aiflytrap gen --split test > synthetic.jsonl     # see the expected schema
+python3 -m aiflytrap batch your_events.jsonl --model > scored.jsonl
 ```
 
 Each input line: `{"id", "text", "actor", "ts", "meta", "context"}`. Label a few hundred events (including
 borderline ones and your real legit power users), then compute AUC, recall at your acceptable FPR, and the
-per-segment error rates with `aispam.metrics`. [INTEGRATION.md](INTEGRATION.md) covers retraining the model.
+per-segment error rates with `aiflytrap.metrics`. [INTEGRATION.md](INTEGRATION.md) covers retraining the model.

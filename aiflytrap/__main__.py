@@ -1,12 +1,12 @@
 """CLI.
 
-  python -m aispam demo
-  python -m aispam score "some text" [--model]
-  python -m aispam batch events.jsonl [--model]   # {"text","actor","ts","meta","context"} per line
-  python -m aispam serve --port 8080 [--model]    # POST /score with the same JSON
-  python -m aispam train                          # retrain bundled model on the synthetic train split
-  python -m aispam bench                          # run the benchmark, write docs/RESULTS.md
-  python -m aispam gen --split test > data.jsonl  # export the synthetic benchmark
+  python -m aiflytrap demo
+  python -m aiflytrap score "some text" [--model]
+  python -m aiflytrap batch events.jsonl [--model]   # {"text","actor","ts","meta","context"} per line
+  python -m aiflytrap serve --port 8080 [--model]    # POST /score with the same JSON
+  python -m aiflytrap train                          # retrain bundled model on the synthetic train split
+  python -m aiflytrap bench                          # run the benchmark, write docs/RESULTS.md
+  python -m aiflytrap gen --split test > data.jsonl  # export the synthetic benchmark
 """
 import argparse
 import json
@@ -29,13 +29,13 @@ DEMO = [
 def _detector(args):
     if getattr(args, "model", False):
         if not os.path.exists(DEFAULT_MODEL_PATH):
-            sys.exit("no bundled model; run `python -m aispam train` first")
+            sys.exit("no bundled model; run `python -m aiflytrap train` first")
         return SpamDetector.with_default_model()
     return SpamDetector()
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aispam")
+    ap = argparse.ArgumentParser(prog="aiflytrap")
     sub = ap.add_subparsers(dest="cmd", required=True)
     d = sub.add_parser("demo"); d.add_argument("--model", action="store_true")
     s = sub.add_parser("score"); s.add_argument("text"); s.add_argument("--model", action="store_true")

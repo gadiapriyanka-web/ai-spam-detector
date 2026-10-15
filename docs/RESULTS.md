@@ -72,4 +72,4 @@ _Precision/recall/F1/FPR are at the block threshold. Single-layer rows use that 
 
 ## Runtime (single thread, pure Python)
 
-2241 messages: mean 1.100 ms, p50 1.089 ms, p95 1.960 ms, p99 2.637 ms, about **909 messages/s**.
+2241 messages: mean 1.018 ms, p50 1.041 ms, p95 1.803 ms, p99 2.257 ms, about **982 messages/s**.

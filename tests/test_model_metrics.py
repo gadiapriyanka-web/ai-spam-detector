@@ -4,9 +4,9 @@ import random
 import tempfile
 import unittest
 
-from aispam import metrics as M
-from aispam.features import FEATURE_NAMES, extract, vectorize
-from aispam.model import TextModel
+from aiflytrap import metrics as M
+from aiflytrap.features import FEATURE_NAMES, extract, vectorize
+from aiflytrap.model import TextModel
 
 
 class MetricsTests(unittest.TestCase):

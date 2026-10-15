@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 
-from aispam.__main__ import main
+from aiflytrap.__main__ import main
 
 
 class CliTests(unittest.TestCase):

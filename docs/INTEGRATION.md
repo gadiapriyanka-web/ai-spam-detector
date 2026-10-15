@@ -36,7 +36,7 @@ The behavioral layer is only as good as the metadata you pass. Cheapest wins, in
 ## 3. Thresholds and cost
 
 ```python
-from aispam.detector import Config
+from aiflytrap.detector import Config
 det = SpamDetector.with_default_model(config=Config(review_at=0.35, block_at=0.8))
 ```
 
@@ -56,8 +56,8 @@ Other `Config` fields: `model_blend` (weight of learned vs rule text score), `be
 The bundled model is trained on the synthetic benchmark. Replace it with one trained on your labeled traffic:
 
 ```python
-from aispam.features import vectorize
-from aispam.model import TextModel
+from aiflytrap.features import vectorize
+from aiflytrap.model import TextModel
 
 X = [vectorize(r["text"], r.get("context")) for r in rows]     # rows: your labeled messages
 y = [r["is_spam"] for r in rows]                               # 1 = text itself is spam
@@ -97,7 +97,7 @@ instructions aimed at the judge.
   Both are bounded.
 - **Restart behavior**: state is in memory. After a restart, cadence and duplicate evidence rebuild from
   scratch. For persistence, replay recent events through `score()` at startup.
-- **Concurrency**: `score()` is thread-safe (one lock around shared state). `python -m aispam serve` uses a
+- **Concurrency**: `score()` is thread-safe (one lock around shared state). `python -m aiflytrap serve` uses a
   threading HTTP server, bound to `127.0.0.1` only; put your own authenticating gateway in front of it.
 - **Monitoring**: track the share of `review`/`block` over time. A sudden jump is either an attack or a
   regression. Track the share of `block` verdicts that humans later overturn.
