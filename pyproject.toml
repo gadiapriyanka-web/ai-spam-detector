@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aispam"
+version = "0.2.0"
+description = "Detect spam written by LLMs or autonomous agents by fusing content, behavior and campaign signals"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[tool.setuptools]
+packages = ["aispam"]
+
+[tool.setuptools.package-data]
+aispam = ["data/*.json"]

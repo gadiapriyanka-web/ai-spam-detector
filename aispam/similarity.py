@@ -47,13 +47,14 @@ class DuplicateIndex:
     """Sliding window of recent messages. Fine for thousands per window; swap for
     an LSH index / vector DB at larger scale."""
 
-    def __init__(self, capacity: int = 5000, max_distance: int = 8, min_words: int = 6):
+    def __init__(self, capacity: int = 5000, max_distance: int = 8, min_words: int = 8):
         self.items: deque = deque(maxlen=capacity)  # (sender, simhash, skeleton)
         self.max_distance = max_distance
         self.min_words = min_words
 
     def check_and_add(self, sender: str, text: str) -> dict:
-        if len(WORD.findall(text.lower())) < self.min_words:
+        n_words = len(WORD.findall(text.lower()))
+        if n_words < self.min_words:
             return {"score": 0.0, "reasons": [], "matches": 0, "senders": 0}
         sh, sk = simhash(text), skeleton(text)
         near, same_skel, senders = 0, 0, set()
@@ -68,9 +69,11 @@ class DuplicateIndex:
                 senders.add(other)
         self.items.append((sender, sh, sk))
         matches = near + same_skel
-        # Many *different* senders sending the same thing is a campaign.
-        score = min(1.0, 0.35 * min(matches, 2) + 0.15 * min(len(senders), 4))
+        # Many *distinct* senders using one template is a campaign; long templates are rarer by
+        # chance than short ones ("thanks for sharing!"), so evidence scales with length.
+        length_factor = min(1.0, max(0.0, (n_words - 6) / 14))
+        score = (1 - 0.55 ** min(len(senders), 5)) * length_factor
         reasons = []
-        if matches:
+        if matches and score > 0.05:
             reasons.append(f"near-duplicate of {matches} recent message(s) from {len(senders)} sender(s)")
         return {"score": round(score, 3), "reasons": reasons, "matches": matches, "senders": len(senders)}

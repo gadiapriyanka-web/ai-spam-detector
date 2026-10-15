@@ -40,7 +40,38 @@ PROMO_WORDS = [
     "earn money", "work from home", "crypto", "casino", "seo services", "backlinks",
     "dm me", "whatsapp", "telegram", "visit our", "check out my", "book a call",
     "boost your", "increase your traffic", "special offer", "act now", "100%",
+    "book a demo", "schedule a demo", "free demo", "request a demo", "grow revenue", "revenue 3x",
+    "working from home", "per day", "make money", "claim your", "you won", "free gift", "airdrop", "winner",
 ]
+
+TRUSTED_DOMAINS = (
+    "github.com", "gitlab.com", "stackoverflow.com", "wikipedia.org", "arxiv.org", "python.org", "readthedocs.io",
+    "kubernetes.io", "postgresql.org", "mozilla.org", "mit.edu", "nih.gov", "rust-lang.org", "npmjs.com", "pypi.org",
+)
+CHEAP_TLDS = {"biz", "xyz", "online", "top", "click", "icu", "live", "site", "shop", "club", "work", "buzz", "info"}
+PROMO_PATH = {"offer", "deal", "promo", "join", "start", "go", "ref", "buy", "free", "claim", "signup"}
+
+
+def url_risk(url: str) -> float:
+    """0 (reputable) .. 1 (looks like a throwaway marketing link). Heuristic only: no network lookups."""
+    from urllib.parse import urlparse
+    u = urlparse(url if "//" in url else "//" + url)
+    host = (u.hostname or "").lower()
+    if not host:
+        return 0.3
+    if any(host == d or host.endswith("." + d) for d in TRUSTED_DOMAINS) or host.endswith((".edu", ".gov")):
+        return 0.0
+    labels = host.split(".")
+    tld, name = labels[-1], labels[-2] if len(labels) >= 2 else host
+    risk = 0.25
+    if tld in CHEAP_TLDS:
+        risk += 0.3
+    if "-" in name:
+        risk += 0.25
+    if any(seg in PROMO_PATH for seg in u.path.lower().strip("/").split("/")):
+        risk += 0.2
+    return min(risk, 1.0)
+
 
 # Characters that are used to evade filters
 ZERO_WIDTH = {"​", "‌", "‍", "⁠", "﻿"}
@@ -130,14 +161,15 @@ def promo(text: str):
     low = text.lower()
     hits = [p for p in PROMO_WORDS if p in low]
     urls = URL.findall(text)
+    risks = [url_risk(u) for u in urls]
     n = max(len(words(text)), 1)
-    raw = len(hits) * 0.4 + len(urls) * 0.5 + (len(urls) / n) * 5
+    raw = len(hits) * 0.4 + sum(risks) * 0.8 + (len(urls) / n) * 3 * max(risks, default=0)
     score = _sigmoid_ramp(raw, 0.2, 1.2)
     bits = []
     if hits:
         bits.append("promo wording: " + ", ".join(hits[:3]))
     if urls:
-        bits.append(f"{len(urls)} link(s)")
+        bits.append(f"{len(urls)} link(s), max link risk {max(risks):.2f}")
     return score, ("; ".join(bits) if score > 0.3 else None)
 
 

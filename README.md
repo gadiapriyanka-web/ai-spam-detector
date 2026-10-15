@@ -1,37 +1,95 @@
 # aispam: detect spam written by AI or AI agents
 
-Pure Python (3.9+), no dependencies.
+[![tests](https://github.com/gadiapriyanka-web/ai-spam-detector/actions/workflows/ci.yml/badge.svg)](https://github.com/gadiapriyanka-web/ai-spam-detector/actions)
+
+A dependency-free Python library, CLI and HTTP service that scores a message (comment, DM, form
+submission, email, review) for the risk that it is **spam produced by an LLM or an autonomous agent**,
+and explains why.
+
+LLM-written spam defeats classic filters: it is fluent, grammatical and rarely repeats verbatim. So `aispam`
+does not rely on "does this text look AI-generated?" alone (an unreliable question, and AI-assisted
+writing is often legitimate). It fuses four independent lines of evidence:
+
+| Layer | Question it answers | Examples |
+|---|---|---|
+| **Content rules** | Does the text read like machine-written *promotion*? | LLM clichés, uniform sentence rhythm, no concrete detail, generic praise unrelated to the parent post, link reputation |
+| **Learned text model** | Same, but weighted by data instead of by hand | 29-feature logistic regression, plain JSON weights, explains its top features |
+| **Sender behavior** | Does the sender act like a script? | honeypot, form-fill time, automation user-agents, metronomic cadence, bursts, brand-new accounts |
+| **Campaign duplication** | Is this one template reworded across accounts? | SimHash + template "skeleton" fingerprints |
+
+The key design rule: **AI-sounding text alone earns a low score.** Risk becomes high when AI-likeness
+co-occurs with spam intent, bot behavior or coordinated duplication.
+
+## Quick start
+
+Python 3.9+, nothing to install.
 
 ```bash
-python3 -m aispam demo
-python3 -m aispam score "text"
-python3 -m aispam batch events.jsonl   # {"text","actor","ts","meta","context"}
-python3 -m aispam serve --port 8080    # POST /score
-python3 -m unittest discover -s tests
+python3 -m aispam demo --model          # try it
+python3 -m aispam bench                 # reproduce the benchmark (about 5 s)
+python3 -m unittest discover -s tests   # 80 tests
 ```
 
 ```python
 from aispam import SpamDetector
-det = SpamDetector()
-v = det.score(text, actor="user42", ts=1.7e9,
-              meta={"fill_time_s": 0.9, "user_agent": "...", "honeypot": "", "account_age_s": 120},
-              context=parent_post_text)
-v.action  # allow | review | block;  v.reasons explains why
+
+det = SpamDetector.with_default_model()      # or SpamDetector() for rules only
+v = det.score(
+    "I hope this message finds you well! Our cutting-edge platform... https://growth-hub.biz/offer",
+    actor="user42",                          # account / IP / API key: behavior is tracked per actor
+    ts=1_760_000_000,                        # event time in seconds (defaults to now)
+    meta={"fill_time_s": 0.8, "user_agent": "python-requests/2.31", "account_age_s": 300},
+    context=parent_post_text,                # optional: what this replies to
+)
+v.action     # "allow" | "review" | "block"
+v.risk       # 0..1
+v.reasons    # ["LLM-typical phrasing: ...", "form completed in 0.8s", ...]
 ```
 
-## How it works
+HTTP service and batch mode:
 
-| Layer | Signals |
+```bash
+python3 -m aispam serve --port 8080 --model
+curl -s localhost:8080/score -d '{"text":"Buy now!!! https://x.biz","actor":"u1"}'
+python3 -m aispam batch events.jsonl --model     # one JSON object per line
+```
+
+## How well does it work?
+
+Measured on a **synthetic**, hand-authored benchmark (2,241 held-out events, 37% spam, 12 scenario
+families including hard negatives like AI-polished benign replies and helpful links). Phrase pools are
+split so test wording never appears in training. Mean over 5 re-drawn test streams:
+
+| | ROC-AUC | Precision | Recall | FPR | Recall at 1% FPR |
+|---|---|---|---|---|---|
+| Full system, block threshold 0.70 | **0.998** | 99.0% | 87.4% | 0.5% | 92.3% |
+
+Speed: about 1 ms per message, roughly 1,000 messages/s on one core of pure Python.
+
+**Read this before trusting those numbers.** They come from synthetic data written by the same author as the
+detector, so they show that the pipeline works and which layers matter, not how it performs on your traffic.
+Real-world accuracy will be lower. Details, ablations, per-category results and every known weakness are in
+[docs/EVALUATION.md](docs/EVALUATION.md) and the auto-generated [docs/RESULTS.md](docs/RESULTS.md).
+
+## Documentation
+
+| Doc | Contents |
 |---|---|
-| Text (`text.py`) | LLM cliché phrases, uniform sentence length, stylistic tics, no concrete detail, generic praise / no topical overlap with parent, promo words and links, zero-width / mixed-script evasion |
-| Behavior (`behavior.py`) | honeypot, form-fill time, automation user-agents, metronomic timing, event rate, new-account bursts |
-| Duplication (`similarity.py`) | SimHash on 3-shingles plus a template "skeleton" hash, so paraphrased campaigns across accounts are caught |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | pipeline, every signal, fusion math, design decisions |
+| [docs/EVALUATION.md](docs/EVALUATION.md) | methodology, results, ablations, failure analysis, limits |
+| [docs/RESULTS.md](docs/RESULTS.md) | full tables, regenerated by `python3 -m aispam bench` |
+| [docs/INTEGRATION.md](docs/INTEGRATION.md) | wiring into an app, tuning thresholds, training on your data, LLM judge, operations |
 
-`detector.py` merges them with a noisy-OR. AI-likeness alone gets low weight, because a human using an assistant is not a spammer. It counts for more alongside spam intent, bot behavior, or duplication.
+## Project layout
 
-## Limits and next steps
-
-- Text-only AI detection is unreliable on short or edited text. Behavior and duplication are the stronger signals; thresholds (`review_at`, `block_at`) are untuned guesses.
-- Use `review` rather than auto-block while you collect labeled data. Then fit the weights (logistic regression / gradient boosting) on your own traffic.
-- Add: an LLM-as-judge for the `review` band, perplexity from a small local LM, per-IP/ASN reputation, and an LSH index for large volumes.
-- Phrase lists age quickly as models change; refresh them from your own flagged data.
+```
+aispam/
+  text.py         content signals (rules)         features.py   29 numeric features
+  behavior.py     sender signals                  model.py      logistic regression, JSON weights
+  similarity.py   campaign duplication            detector.py   fusion + Verdict + config
+  synth.py        benchmark generator             evaluate.py   metrics, ablations, report
+  metrics.py      AUC / AP / PRF                  __main__.py   CLI and HTTP server
+  data/text_model.json   bundled model
+tests/            80 tests: unit, adversarial, CLI, benchmark regression gates
+docs/             architecture, evaluation, integration, generated results
+```
