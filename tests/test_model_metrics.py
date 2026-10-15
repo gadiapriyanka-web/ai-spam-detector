@@ -98,3 +98,36 @@ class FeatureAndModelTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CurveAndBootstrapTests(unittest.TestCase):
+    def test_roc_curve_endpoints_and_area(self):
+        y, s = [0, 0, 1, 1], [0.1, 0.4, 0.35, 0.8]
+        pts = M.roc_curve(y, s)
+        self.assertEqual(pts[0], (0.0, 0.0))
+        self.assertEqual(pts[-1], (1.0, 1.0))
+        area = sum((x2 - x1) * (y1 + y2) / 2 for (x1, y1), (x2, y2) in zip(pts, pts[1:]))
+        self.assertAlmostEqual(area, M.roc_auc(y, s))
+
+    def test_pr_curve_matches_precision_recall(self):
+        pts = M.pr_curve([1, 0, 1, 0], [0.9, 0.8, 0.7, 0.1])
+        self.assertEqual(pts[0], (0.5, 1.0))
+        self.assertEqual(pts[-1], (1.0, 0.5))
+
+    def test_thin_keeps_endpoints_and_shrinks(self):
+        pts = [(i / 1000, i / 1000) for i in range(1001)]
+        t = M.thin(pts)
+        self.assertEqual((t[0], t[-1]), (pts[0], pts[-1]))
+        self.assertLess(len(t), 400)
+
+    def test_cluster_bootstrap_brackets_point_estimate(self):
+        rng = random.Random(0)
+        y, s, g = [], [], []
+        for k in range(60):
+            lab = k % 2
+            for _ in range(5):
+                y.append(lab); s.append(rng.random() * 0.6 + 0.4 * lab); g.append(k)
+        r = M.cluster_bootstrap(y, s, g, {"auc": M.roc_auc}, n_boot=200, seed=1)["auc"]
+        self.assertLessEqual(r[1], r[0])
+        self.assertGreaterEqual(r[2], r[0] - 0.02)
+        self.assertGreater(r[2], r[1])

@@ -27,7 +27,7 @@ Python 3.9+, nothing to install.
 ```bash
 python3 -m aispam demo --model          # try it
 python3 -m aispam bench                 # reproduce the benchmark (about 5 s)
-python3 -m unittest discover -s tests   # 80 tests
+python3 -m unittest discover -s tests   # 84 tests
 ```
 
 ```python
@@ -90,6 +90,6 @@ aispam/
   synth.py        benchmark generator             evaluate.py   metrics, ablations, report
   metrics.py      AUC / AP / PRF                  __main__.py   CLI and HTTP server
   data/text_model.json   bundled model
-tests/            80 tests: unit, adversarial, CLI, benchmark regression gates
+tests/            84 tests: unit, adversarial, CLI, benchmark regression gates
 docs/             architecture, evaluation, integration, generated results
 ```

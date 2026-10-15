@@ -67,3 +67,71 @@ def recall_at_fpr(y, s, max_fpr):
         if m["fpr"] <= max_fpr:
             best = max(best, m["recall"])
     return best
+
+
+def roc_curve(y, s):
+    """(fpr, tpr) points, one per distinct threshold, from (0,0) to (1,1)."""
+    pos = sum(y)
+    neg = len(y) - pos
+    pairs = sorted(zip(s, y), key=lambda t: -t[0])
+    pts, tp, fp, i = [(0.0, 0.0)], 0, 0, 0
+    while i < len(pairs):
+        j = i
+        while j < len(pairs) and pairs[j][0] == pairs[i][0]:
+            tp += pairs[j][1]
+            fp += 1 - pairs[j][1]
+            j += 1
+        pts.append((fp / neg, tp / pos))
+        i = j
+    return pts
+
+
+def pr_curve(y, s):
+    """(recall, precision) points, one per distinct threshold."""
+    pos = sum(y)
+    pairs = sorted(zip(s, y), key=lambda t: -t[0])
+    pts, tp, fp, i = [], 0, 0, 0
+    while i < len(pairs):
+        j = i
+        while j < len(pairs) and pairs[j][0] == pairs[i][0]:
+            tp += pairs[j][1]
+            fp += 1 - pairs[j][1]
+            j += 1
+        pts.append((tp / pos, tp / (tp + fp)))
+        i = j
+    return pts
+
+
+def thin(points, min_step=0.004):
+    """Drop points that barely move the curve, so plots stay small. Keeps both endpoints."""
+    out = [points[0]]
+    for p in points[1:-1]:
+        if abs(p[0] - out[-1][0]) >= min_step or abs(p[1] - out[-1][1]) >= min_step:
+            out.append(p)
+    out.append(points[-1])
+    return out
+
+
+def cluster_bootstrap(y, s, groups, stat_fns, n_boot=1000, seed=0):
+    """Percentile bootstrap that resamples whole groups (e.g. senders), because messages from one
+    sender are not independent. `stat_fns` maps name -> f(y, s). Returns name -> (point, lo95, hi95)."""
+    import random
+    rng = random.Random(seed)
+    idx_by = {}
+    for i, g in enumerate(groups):
+        idx_by.setdefault(g, []).append(i)
+    keys = list(idx_by)
+    point = {k: f(y, s) for k, f in stat_fns.items()}
+    draws = {k: [] for k in stat_fns}
+    for _ in range(n_boot):
+        pick = [i for g in (rng.choice(keys) for _ in keys) for i in idx_by[g]]
+        yy, ss = [y[i] for i in pick], [s[i] for i in pick]
+        if sum(yy) in (0, len(yy)):
+            continue
+        for k, f in stat_fns.items():
+            draws[k].append(f(yy, ss))
+    out = {}
+    for k, d in draws.items():
+        d.sort()
+        out[k] = (point[k], d[int(0.025 * len(d))], d[int(0.975 * len(d)) - 1])
+    return out
